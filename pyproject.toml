@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "ktimer"
+version = "0.1.0"
+description = "A vibe-coded modern timer using PySide6"
+authors = ["Jonathan Assamagan <kurojojo@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.12, < 3.15"
+pyside6 = "^6.10.2"
+
+
+[tool.poetry.group.dev.dependencies]
+pyinstaller = "^6.19.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
