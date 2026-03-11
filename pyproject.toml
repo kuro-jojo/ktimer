@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.12, < 3.15"
 pyside6 = "^6.10.2"
+playsound3 = "^3.3.1"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtCore import Qt, QTimer, QRectF
+from PySide6.QtCore import Qt, QTimer, QRectF, QRegularExpression
 from PySide6.QtGui import (
     QColor,
     QPainter,
@@ -8,6 +8,7 @@ from PySide6.QtGui import (
     QIcon,
     QPixmap,
     QFont,
+    QRegularExpressionValidator,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -19,6 +20,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QLineEdit,
 )
+from playsound3 import playsound
 
 
 class CircularProgress(QWidget):
@@ -122,19 +124,28 @@ class ModernTimer(QMainWindow):
         layout.addWidget(preset_label)
 
         preset_layout = QHBoxLayout()
-        presets = [("1m", 1), ("5m", 5), ("15m", 15), ("30m", 30), ("1h", 60)]
-        for text, mins in presets:
+        # each tuple is (label, seconds)
+        presets = [
+            ("30s", 30),
+            ("1m", 60),
+            ("5m", 5 * 60),
+            ("15m", 15 * 60),
+            ("30m", 30 * 60),
+            ("1h", 60 * 60),
+        ]
+        for text, secs in presets:
             btn = QPushButton(text, objectName="preset")
-            # Using a lambda with a default value to capture the current 'mins'
-            btn.clicked.connect(lambda checked=False, m=mins: self.set_preset(m))
+            btn.clicked.connect(lambda checked=False, s=secs: self.set_preset(s))
             preset_layout.addWidget(btn)
         layout.addLayout(preset_layout)
 
         # 2. Custom Input
         input_layout = QHBoxLayout()
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Or enter minutes manually...")
-        self.input_field.setValidator(QIntValidator(1, 999))
+        self.input_field.setPlaceholderText("Or enter time (m, s or m:s)...")
+        # allow 1–3 digits, optional :ss, optional trailing s
+        reg = QRegularExpression(r"^\d{1,3}(:\d{1,2})?s?$")
+        self.input_field.setValidator(QRegularExpressionValidator(reg))
         input_layout.addWidget(self.input_field)
         layout.addLayout(input_layout)
 
@@ -162,12 +173,58 @@ class ModernTimer(QMainWindow):
         ctrl_layout.addWidget(self.reset_btn, stretch=1)
         layout.addLayout(ctrl_layout)
 
-    def set_preset(self, mins):
+    def set_preset(self, seconds: int):
+        """apply a preset value expressed in *seconds*"""
         self.reset_timer()
-        self.input_field.setText(str(mins))
-        self.total_seconds = mins * 60
-        self.remaining_seconds = self.total_seconds
+        # show something human-readable in the input field
+        if seconds < 60:
+            self.input_field.setText(f"{seconds}s")
+        elif seconds % 60 == 0:
+            self.input_field.setText(str(seconds // 60))
+        else:
+            m, s = divmod(seconds, 60)
+            self.input_field.setText(f"{m}:{s:02d}")
+        self.total_seconds = seconds
+        self.remaining_seconds = seconds
         self.update_display_only()
+
+    def parse_input(self, text: str) -> int:
+        """
+        Interpret the text entered by the user and return
+        a number of seconds.  Acceptable forms:
+            5           -> 5 minutes
+            5m          -> 5 minutes (m is optional)
+            30s         -> 30 seconds
+            2:15        -> 2 minutes 15 seconds
+        invalid/empty input falls back to one minute.
+        """
+        text = text.strip().lower()
+        if not text:
+            return 60
+        # explicit seconds suffix
+        if text.endswith("s"):
+            text = text[:-1]
+            try:
+                sec = int(text)
+                return max(1, sec)
+            except ValueError:
+                return 60
+        # colon separated minutes:seconds
+        if ":" in text:
+            parts = text.split(":")
+            if len(parts) == 2:
+                try:
+                    m = int(parts[0])
+                    s = int(parts[1])
+                    return max(1, m * 60 + s)
+                except ValueError:
+                    return 60
+        # treat plain number as minutes
+        try:
+            m = int(text)
+            return max(1, m * 60)
+        except ValueError:
+            return 60
 
     def set_emoji_icon(self, emoji="⏱️"):
         # Create a 64x64 canvas
@@ -189,8 +246,7 @@ class ModernTimer(QMainWindow):
         else:
             if self.remaining_seconds <= 0:
                 val = self.input_field.text()
-                mins = int(val) if val else 1
-                self.total_seconds = mins * 60
+                self.total_seconds = self.parse_input(val)
                 self.remaining_seconds = self.total_seconds
 
             self.timer.start(1000)
@@ -221,6 +277,7 @@ class ModernTimer(QMainWindow):
             self.progress.value = (self.remaining_seconds / self.total_seconds) * 100
             self.progress.update()
         else:
+            playsound("alarm.mp3")
             self.reset_timer()
 
 

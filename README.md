@@ -19,3 +19,21 @@ poetry install
 
 # Run the timer
 poetry run python app.py
+```
+
+## Building the App
+
+If you want to ship KTimer as a single executable you can use
+[PyInstaller](https://www.pyinstaller.org/).  The project already
+defines its dependencies in `pyproject.toml`, so just invoke
+PyInstaller through Poetry:
+
+```bash
+poetry run pyinstaller \
+    --noconfirm \
+    --onefile \
+    --windowed \
+    --name "KTimer" \
+    app.py
+```
+That will produce a dist/KTimer (or KTimer.exe on Windows) binary you can distribute. The --windowed flag keeps the console window from appearing on start‑up, and --onefile bundles everything into a single file
