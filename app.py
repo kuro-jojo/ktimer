@@ -4,7 +4,6 @@ from PySide6.QtGui import (
     QColor,
     QPainter,
     QPen,
-    QIntValidator,
     QIcon,
     QPixmap,
     QFont,
@@ -27,6 +26,7 @@ class CircularProgress(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.value = 100
+        self.is_playing = False  # New attribute to track play/pause state
         self.setMinimumSize(200, 200)
 
     def paintEvent(self, event) -> None:
@@ -47,6 +47,13 @@ class CircularProgress(QWidget):
             span_angle = -int((self.value / 100) * 360 * 16)
             painter.drawArc(rect, 90 * 16, span_angle)
 
+        # Draw play/pause emoji in the center
+        center_rect = QRectF(self.width() / 2 - 20, self.height() / 2 - 20, 40, 40)
+        painter.setFont(QFont("Segoe UI Emoji", 32))
+        painter.setPen(QPen(Qt.white))  # Ensure visibility
+        emoji = "▶️" if self.is_playing else "⏸️"
+        painter.drawText(center_rect, Qt.AlignCenter, emoji)
+
 
 class ModernTimer(QMainWindow):
     def __init__(self) -> None:
@@ -54,7 +61,6 @@ class ModernTimer(QMainWindow):
         self.setWindowTitle("KTimer")
         self.setMinimumSize(450, 600)
         self.set_emoji_icon("⏱️")
-        
         self.total_seconds = 0
         self.remaining_seconds = 0
 
@@ -243,6 +249,7 @@ class ModernTimer(QMainWindow):
         if self.timer.isActive():
             self.timer.stop()
             self.start_btn.setText("Resume")
+            self.progress.is_playing = False  # Update to pause state
         else:
             if self.remaining_seconds <= 0:
                 val = self.input_field.text()
@@ -252,11 +259,14 @@ class ModernTimer(QMainWindow):
             self.timer.start(1000)
             self.start_btn.setText("Pause")
             self.input_field.setEnabled(False)
+            self.progress.is_playing = True  # Update to play state
+        self.progress.update()  # Trigger repaint
 
     def reset_timer(self) -> None:
         self.timer.stop()
         self.remaining_seconds = 0
         self.progress.value = 100
+        self.progress.is_playing = False  # Reset to pause state
         self.progress.update()
         self.time_label.setText("00:00")
         self.start_btn.setText("Start Timer")
@@ -277,6 +287,8 @@ class ModernTimer(QMainWindow):
             self.progress.value = (self.remaining_seconds / self.total_seconds) * 100
             self.progress.update()
         else:
+            self.raise_()  # Bring window to front
+            self.activateWindow()  # Activate and focus the window
             playsound("alarm.mp3")
             self.reset_timer()
 
