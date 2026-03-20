@@ -1,3 +1,4 @@
+import os
 import sys
 from PySide6.QtCore import Qt, QTimer, QRectF, QRegularExpression
 from PySide6.QtGui import (
@@ -20,6 +21,17 @@ from PySide6.QtWidgets import (
     QLineEdit,
 )
 from playsound3 import playsound
+
+
+def resource_path(relative_path: str):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 
 class CircularProgress(QWidget):
@@ -289,7 +301,7 @@ class ModernTimer(QMainWindow):
         else:
             self.raise_()  # Bring window to front
             self.activateWindow()  # Activate and focus the window
-            playsound("alarm.mp3")
+            playsound(resource_path("alarm.mp3"))
             self.reset_timer()
 
 
